@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DnD Interactive Map</title>
+
+    <!-- Leaflet CSS for map styling -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        /* Ensure the map occupies the full page and adjusts to different screen sizes */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;  /* Full screen map */
+        }
+    </style>
+</head>
+<body>
+    <h1>DnD Interactive Map</h1>
+    <input type="file" id="uploadImage" />  <!-- File input for loading the map image -->
+    <div id="map"></div>  <!-- Map container -->
+
+    <!-- Leaflet.js and Routing Machine JS for route drawing -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+    <script>
+        // Initialize the map with a simple CRS (coordinate reference system)
+        const map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: -5,
+            maxZoom: 4,
+            zoom: 0
+        });
+
+        let imageUrl = '';  // The variable that holds the map image URL
+        let mapBounds;      // The bounds for the map
+
+        // Handle image loading via file input
+        document.getElementById('uploadImage').addEventListener('change', function(event) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imageUrl = e.target.result;  // Store the path of the uploaded image
+                const img = new Image();
+                img.src = imageUrl;
+                img.onload = function() {
+                    // Dynamically adjust map bounds based on the loaded image's size
+                    mapBounds = [[0, 0], [img.height, img.width]];  
+                    L.imageOverlay(imageUrl, mapBounds).addTo(map);  // Add the image to the map
+                    map.fitBounds(mapBounds);  // Fit map to the image size, adjusting automatically
+                };
+            };
+            reader.readAsDataURL(event.target.files[0]);  // Load the image file
+        });
+
+        // Default image if no file is uploaded
+        if (!imageUrl) {
+            imageUrl = 'uploadImage.jpg';  // Default image path
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = function() {
+                mapBounds = [[0, 0], [img.height, img.width]];
+                L.imageOverlay(imageUrl, mapBounds).addTo(map);
+                map.fitBounds(mapBounds);
+            };
+        }
+
+        // Create a layer group for markers
+        const markers = L.layerGroup().addTo(map);
+
+        // Add a marker with a custom label directly on the map
+        function addMarker(e) {
+            // Add the marker at the clicked position
+            const marker = L.marker(e.latlng, {
+                icon: L.divIcon({  // Custom style for the marker
+                    className: 'custom-marker',
+                    html: '<span style="color: red;">⚔️</span>',  // Custom icon for DnD
+                    iconSize: [30, 30]
+                })
+            }).addTo(markers);
+
+            // Prompt user to enter a label for the marker
+            const label = prompt("Enter a label for this marker:");
+            
+            if (label) {
+                // Bind the label to the marker as a popup
+                marker.bindPopup(label).openPopup();
+            }
+
+            // Example: Open a detailed map for this location when the marker is clicked
+            marker.on('click', () => {
+                alert("This will open a detailed map for this location.");
+            });
+        }
+
+        map.on('click', addMarker);  // Add marker when clicking on the map
+
+        // Enhanced route drawing with Leaflet Routing Machine
+        let routeControl = L.Routing.control({
+            waypoints: [],
+            routeWhileDragging: true,  // Allow dragging the route
+            createMarker: function() { return null; },  // Hide route markers
+            lineOptions: {
+                styles: [{ color: 'blue', weight: 4, opacity: 0.7 }]
+            }
+        }).addTo(map);
+
+        // Function to draw routes on the map
+        function drawRoute(latlng1, latlng2) {
+            routeControl.setWaypoints([latlng1, latlng2]);  // Set start and end points for the route
+        }
+
+        // Check and set default icons for characters, NPCs, and objects
+        const defaultPlayerIcon = 'path/to/player-image.png';  // Replace with actual image path
+        const defaultNpcIcon = 'path/to/npc-image.png';  // Replace with actual image path
+        const defaultObjectIcon = 'path/to/object-image.png';  // Replace with actual image path
+
+        // Create custom icons for the characters, NPCs, and objects
+        const playerIcon = L.icon({
+            iconUrl: defaultPlayerIcon,
+            iconSize: [50, 50],  // Size of the character icon
+        });
+
+        const npcIcon = L.icon({
+            iconUrl: defaultNpcIcon,
+            iconSize: [50, 50],
+        });
+
+        const objectIcon = L.icon({
+            iconUrl: defaultObjectIcon,
+            iconSize: [30, 30],
+        });
+
+        // Add markers for player, NPC, and object with custom icons
+        const playerMarker = L.marker([100, 100], {icon: playerIcon}).addTo(markers);
+        const npcMarker = L.marker([200, 200], {icon: npcIcon}).addTo(markers);
+        const objectMarker = L.marker([300, 300], {icon: objectIcon}).addTo(markers);
+
+        // Enable dragging of markers (for characters, NPCs, and objects)
+        playerMarker.dragging.enable();
+        npcMarker.dragging.enable();
+        objectMarker.dragging.enable();
+
+        // Handle drag events for the markers
+        playerMarker.on('dragend', function() {
+            console.log('Player marker moved!');
+        });
+
+        npcMarker.on('dragend', function() {
+            console.log('NPC marker moved!');
+        });
+
+        objectMarker.on('dragend', function() {
+            console.log('Object marker moved!');
+        });
+    </script>
+</body>
+</html>
